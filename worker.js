@@ -20,11 +20,11 @@ function main() {
     })
 
     function CompleteImageInspectionWorker(complete) {
-        complete.success({ outFrameLocation: 'up your ass', });
+        complete.success({ baseImageLocationSrc: 'C:/imagedir'});
     }
 
     function CompleteVideoInspectionWorker(complete) {
-        complete.success({ baseOutputImageLocation: 'C:/bob', videoFrames: ['c:/frame1', 'c:/frame2'] });
+        complete.success({outputFramesSrc: ['outputFrames: C:/bob, outputFrames: c:/frame1, outputFrames : c:/frame2' ], baseImageLocationSrc : 'stuff'})
     }
 
 

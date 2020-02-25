@@ -1,0 +1,207 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<bpmn:definitions xmlns:bpmn="http://www.omg.org/spec/BPMN/20100524/MODEL" xmlns:bpmndi="http://www.omg.org/spec/BPMN/20100524/DI" xmlns:dc="http://www.omg.org/spec/DD/20100524/DC" xmlns:zeebe="http://camunda.org/schema/zeebe/1.0" xmlns:di="http://www.omg.org/spec/DD/20100524/DI" id="Definitions_0bwsbnc" targetNamespace="http://bpmn.io/schema/bpmn" exporter="Zeebe Modeler" exporterVersion="0.8.0">
+  <bpmn:process id="Test_Yolo_workflow" name="Test Yolo Workflow" isExecutable="true">
+    <bpmn:laneSet id="LaneSet_0cg4f3a" />
+    <bpmn:serviceTask id="ReadImage" name="Read Image">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="ImageInspection" retries="3" />
+        <zeebe:ioMapping>
+          <zeebe:output source="baseImageLocationSrc" target="baseImageLocation" />
+        </zeebe:ioMapping>
+        <zeebe:taskHeaders>
+          <zeebe:header key="propVideoFilepath" value="VideoFilepath" />
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_0c8o60m</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_0z5wh4d</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:startEvent id="StartEvent_1" name="File Upload">
+      <bpmn:outgoing>SequenceFlow_0c8o60m</bpmn:outgoing>
+    </bpmn:startEvent>
+    <bpmn:serviceTask id="readVideo" name="Read Video">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="VideoInspection" retries="3" />
+        <zeebe:ioMapping>
+          <zeebe:output source="outputFramesSrc" target="outputFrames" />
+        </zeebe:ioMapping>
+        <zeebe:taskHeaders>
+          <zeebe:header key="propImageFilepath" value="ImageFilepath" />
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_0z5wh4d</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_17ealid</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:serviceTask id="WriteVideo" name="WriteVideo">
+      <bpmn:extensionElements>
+        <zeebe:taskDefinition type="WriteVideo" retries="3" />
+        <zeebe:ioMapping>
+          <zeebe:input source="inFrameLocations" target="FrameLocations" />
+        </zeebe:ioMapping>
+        <zeebe:taskHeaders>
+          <zeebe:header key="propVideoFilePath" value="VideoFilepath" />
+        </zeebe:taskHeaders>
+      </bpmn:extensionElements>
+      <bpmn:incoming>SequenceFlow_111mkyx</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_1mhwoug</bpmn:outgoing>
+    </bpmn:serviceTask>
+    <bpmn:subProcess id="YoloProcess" name="Yolo Process Loop">
+      <bpmn:incoming>SequenceFlow_17ealid</bpmn:incoming>
+      <bpmn:outgoing>SequenceFlow_111mkyx</bpmn:outgoing>
+      <bpmn:multiInstanceLoopCharacteristics>
+        <bpmn:extensionElements>
+          <zeebe:loopCharacteristics inputCollection="outputFrames" inputElement="outputFrameSrc" outputCollection="completedFrames" outputElement="outputedVideoFrames" />
+        </bpmn:extensionElements>
+      </bpmn:multiInstanceLoopCharacteristics>
+      <bpmn:startEvent id="yoloStart" name="Yolo Sub Start">
+        <bpmn:outgoing>SequenceFlow_1f6wgsh</bpmn:outgoing>
+      </bpmn:startEvent>
+      <bpmn:serviceTask id="ServiceTask_0bekpwl" name="Histogram Match">
+        <bpmn:extensionElements>
+          <zeebe:taskDefinition type="HistogramMatch" retries="3" />
+        </bpmn:extensionElements>
+        <bpmn:incoming>SequenceFlow_1f6wgsh</bpmn:incoming>
+        <bpmn:outgoing>SequenceFlow_09yz4up</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="ServiceTask_032g0s6" name="ClassifyYolo">
+        <bpmn:extensionElements>
+          <zeebe:taskDefinition type="ClassifyYolo" retries="3" />
+          <zeebe:ioMapping>
+            <zeebe:input source="inImageLocation" target="ImageLocation" />
+            <zeebe:output source="outClassLabels" target="ClassLabels" />
+          </zeebe:ioMapping>
+          <zeebe:taskHeaders>
+            <zeebe:header key="propClassifierFilePath" value="ClassifierFIlepath" />
+          </zeebe:taskHeaders>
+        </bpmn:extensionElements>
+        <bpmn:incoming>SequenceFlow_09yz4up</bpmn:incoming>
+        <bpmn:outgoing>SequenceFlow_08oxia7</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:serviceTask id="ServiceTask_104011m" name="RenderGeometryCV">
+        <bpmn:extensionElements>
+          <zeebe:taskDefinition type="RenderGeometry" retries="3" />
+          <zeebe:ioMapping>
+            <zeebe:input source="inImageLocation" target="ImageLocation" />
+            <zeebe:input source="inGeometry" target="Geometry" />
+            <zeebe:output source="outImageLocation" target="ImageLocation" />
+          </zeebe:ioMapping>
+          <zeebe:taskHeaders>
+            <zeebe:header key="propClassifierFilePath" value="ClassifierFIlepath" />
+          </zeebe:taskHeaders>
+        </bpmn:extensionElements>
+        <bpmn:incoming>SequenceFlow_08oxia7</bpmn:incoming>
+        <bpmn:outgoing>SequenceFlow_1vuk43g</bpmn:outgoing>
+      </bpmn:serviceTask>
+      <bpmn:sequenceFlow id="SequenceFlow_09yz4up" sourceRef="ServiceTask_0bekpwl" targetRef="ServiceTask_032g0s6" />
+      <bpmn:sequenceFlow id="SequenceFlow_08oxia7" sourceRef="ServiceTask_032g0s6" targetRef="ServiceTask_104011m" />
+      <bpmn:sequenceFlow id="SequenceFlow_1f6wgsh" sourceRef="yoloStart" targetRef="ServiceTask_0bekpwl" />
+      <bpmn:endEvent id="EndEvent_1ihggjl" name="filescreated">
+        <bpmn:incoming>SequenceFlow_1vuk43g</bpmn:incoming>
+      </bpmn:endEvent>
+      <bpmn:sequenceFlow id="SequenceFlow_1vuk43g" sourceRef="ServiceTask_104011m" targetRef="EndEvent_1ihggjl" />
+    </bpmn:subProcess>
+    <bpmn:sequenceFlow id="SequenceFlow_111mkyx" sourceRef="YoloProcess" targetRef="WriteVideo" />
+    <bpmn:sequenceFlow id="SequenceFlow_0z5wh4d" sourceRef="ReadImage" targetRef="readVideo" />
+    <bpmn:sequenceFlow id="SequenceFlow_17ealid" sourceRef="readVideo" targetRef="YoloProcess" />
+    <bpmn:sequenceFlow id="SequenceFlow_0c8o60m" sourceRef="StartEvent_1" targetRef="ReadImage" />
+    <bpmn:endEvent id="EndEvent_03k1a3r" name="done">
+      <bpmn:incoming>SequenceFlow_1mhwoug</bpmn:incoming>
+    </bpmn:endEvent>
+    <bpmn:sequenceFlow id="SequenceFlow_1mhwoug" sourceRef="WriteVideo" targetRef="EndEvent_03k1a3r" />
+  </bpmn:process>
+  <bpmn:message id="Message_1a606ur">
+    <bpmn:extensionElements>
+      <zeebe:subscription correlationKey="123" />
+    </bpmn:extensionElements>
+  </bpmn:message>
+  <bpmn:message id="Message_01t3phw" name="Message_21mhblo" />
+  <bpmn:message id="Message_0rnrzr7" name="Message_22vb3tl" />
+  <bpmn:message id="Message_0p6d53y" name="Message_0qvod7g" />
+  <bpmn:message id="Message_1vyq2rr" name="Message_2ld1r1r" />
+  <bpmn:message id="Message_1o31rep" name="Message_1snrff9" />
+  <bpmn:message id="Message_0nvggr8" />
+  <bpmndi:BPMNDiagram id="BPMNDiagram_1">
+    <bpmndi:BPMNPlane id="BPMNPlane_1" bpmnElement="Test_Yolo_workflow">
+      <bpmndi:BPMNShape id="ServiceTask_087ing4_di" bpmnElement="readVideo">
+        <dc:Bounds x="430" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="_BPMNShape_StartEvent_2" bpmnElement="StartEvent_1">
+        <dc:Bounds x="162" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="153" y="205" width="56" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_1xra7hh_di" bpmnElement="ReadImage">
+        <dc:Bounds x="250" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_12jrvxx_di" bpmnElement="WriteVideo">
+        <dc:Bounds x="1430" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="SubProcess_0tefyxe_di" bpmnElement="YoloProcess" isExpanded="true">
+        <dc:Bounds x="640" y="80" width="690" height="200" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="StartEvent_1tbfttj_di" bpmnElement="yoloStart">
+        <dc:Bounds x="680" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="666" y="205" width="70" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_0bekpwl_di" bpmnElement="ServiceTask_0bekpwl">
+        <dc:Bounds x="770" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_032g0s6_di" bpmnElement="ServiceTask_032g0s6">
+        <dc:Bounds x="950" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNShape id="ServiceTask_104011m_di" bpmnElement="ServiceTask_104011m">
+        <dc:Bounds x="1100" y="140" width="100" height="80" />
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_09yz4up_di" bpmnElement="SequenceFlow_09yz4up">
+        <di:waypoint x="870" y="180" />
+        <di:waypoint x="950" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_08oxia7_di" bpmnElement="SequenceFlow_08oxia7">
+        <di:waypoint x="1050" y="180" />
+        <di:waypoint x="1100" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_1f6wgsh_di" bpmnElement="SequenceFlow_1f6wgsh">
+        <di:waypoint x="716" y="180" />
+        <di:waypoint x="770" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="EndEvent_1ihggjl_di" bpmnElement="EndEvent_1ihggjl">
+        <dc:Bounds x="1252" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1242" y="205" width="56" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_1vuk43g_di" bpmnElement="SequenceFlow_1vuk43g">
+        <di:waypoint x="1200" y="180" />
+        <di:waypoint x="1252" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_111mkyx_di" bpmnElement="SequenceFlow_111mkyx">
+        <di:waypoint x="1330" y="180" />
+        <di:waypoint x="1430" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_0z5wh4d_di" bpmnElement="SequenceFlow_0z5wh4d">
+        <di:waypoint x="350" y="180" />
+        <di:waypoint x="430" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_17ealid_di" bpmnElement="SequenceFlow_17ealid">
+        <di:waypoint x="530" y="180" />
+        <di:waypoint x="640" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNEdge id="SequenceFlow_0c8o60m_di" bpmnElement="SequenceFlow_0c8o60m">
+        <di:waypoint x="198" y="180" />
+        <di:waypoint x="250" y="180" />
+      </bpmndi:BPMNEdge>
+      <bpmndi:BPMNShape id="EndEvent_03k1a3r_di" bpmnElement="EndEvent_03k1a3r">
+        <dc:Bounds x="1612" y="162" width="36" height="36" />
+        <bpmndi:BPMNLabel>
+          <dc:Bounds x="1618" y="205" width="25" height="14" />
+        </bpmndi:BPMNLabel>
+      </bpmndi:BPMNShape>
+      <bpmndi:BPMNEdge id="SequenceFlow_1mhwoug_di" bpmnElement="SequenceFlow_1mhwoug">
+        <di:waypoint x="1530" y="180" />
+        <di:waypoint x="1612" y="180" />
+      </bpmndi:BPMNEdge>
+    </bpmndi:BPMNPlane>
+  </bpmndi:BPMNDiagram>
+</bpmn:definitions>
